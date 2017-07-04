@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>A-G Status Tool</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" 
+            content="A tool to help California high school students estimate their current A-G status." >
+        
+        <!-- CSS -->
+        <link rel="stylesheet" 
+            href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" 
+            type="text/css" />            
+        <link 
+            rel="stylesheet" 
+            href="https://bootswatch.com/yeti/bootstrap.min.css" 
+            type="text/css" />
+        <link href="css/style.css" rel="stylesheet" type="text/css" />
+
+        <!-- JS -->
+        <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"
+            type="text/javascript" ></script>
+        <script 
+            src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" 
+            crossorigin="anonymous" 
+            type="text/javascript" ></script>
+        <script src="js/schoolData.js" type="text/javascript"></script>
+        <script src="js/app.js" type="text/javascript"></script>
+    </head>
+    <body>
+        <nav class="navbar navbar-inverse">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">STA-G</a>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li ><a id="stag-debug-modal-toggle">Show Modal</a></li>
+                        <li ><a href="#">Reset</a></li>
+                    </ul>
+                </div><!-- /.navbar-collapse -->
+            </div><!-- /.container-fluid -->
+        </nav>
+
+        <div class="modal" id="stag-main-modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                <div class="modal-header">                    
+                    <h4 class="modal-title">Modal title</h4>
+                </div>
+                <div class="modal-body js-stag-modal-body stag-modal-body">
+                    
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+                </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </body>
+</html>
