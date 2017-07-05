@@ -12,6 +12,11 @@
     display: none;
 }
 
+.js-stag-school-finder-progress-bar
+{
+    display: none;
+}
+
 /* Small devices (tablets, 768px and up) */
 @media (min-width: 768px) 
 {

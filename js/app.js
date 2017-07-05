@@ -11,17 +11,18 @@ const STAG_MODAL_AUX_BUTTON = 'button[data-aux=modal]';
 const STAG_MODAL_BODY = '.js-stag-modal-body';
 const STAG_MODAL_TITLE = STAG_MAIN_MODAL + ' .modal-header h4.modal-title';
 const STAG_SCHOOL_SELECT = '#js-stag-school-select';
+const STAG_SCHOOL_FINDER_TEXT = '#js-stag-school-finder-text';
+const STAG_SCHOOL_FINDER_PROGRESS_BAR = '.js-stag-school-finder-progress-bar';
 
-const STAG_APP_STATES = 
-                    {
-                        Initial : 0,
-                        SchoolSelection : 1,
-                        SchoolFinder : 2,
-                        SchoolFinderResults: 3,
-                        GradeSelection : 4,
-                        InstructionsDialog : 5,
-                        CourseSelection : 6
-                    };
+const STAG_APP_STATES = {
+                    Initial : 0,
+                    SchoolSelection : 1,
+                    SchoolFinder : 2,
+                    SchoolFinderResults: 3,
+                    GradeSelection : 4,
+                    InstructionsDialog : 5,
+                    CourseSelection : 6
+                };
 var STAG_APP_STATE_RENDER_FUNCTIONS = [ function(){}, function(){}, function(){},
                                         function(){}, function(){}, function(){},
                                         function(){} ];
@@ -35,6 +36,8 @@ var stagUserLocationAvailable = false;
 var stagUserLocationCities;
 var stagUserSchoolSelection;
 var stagUserLocalSchools;
+var stagUserSchoolFinderSearchText;
+var stagSchoolFinderSearchResults;
 
 $(onReady);
 
@@ -61,6 +64,9 @@ function bindUserInput() {
 }
 
 function nextState() {
+
+    $(STAG_MAIN_MODAL).hide();
+
     ++stagAppNextState;
 
     // If the user's location is not available, skip 
@@ -74,14 +80,17 @@ function nextState() {
     // has made a school selection, go to grade selection
     else if ( stagAppNextState === STAG_APP_STATES.SchoolFinder && stagUserSchoolSelection ) {
         stagAppNextState = STAG_APP_STATES.GradeSelection;
-    }
+    } 
+    
+    else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && !validSchoolSearchInput() ) {
+        --stagAppNextState;        
+    } 
 
     console.log(STAG_APP_STATE_RENDER_FUNCTIONS[stagAppNextState].name);
     setAppState(stagAppNextState);
 }
 
-function setAppState(state) {    
-    $(STAG_MAIN_MODAL).fadeOut('fast');
+function setAppState(state) {   
     clearRenderableAreas();
     stagAppState = state;    
     STAG_APP_STATE_RENDER_FUNCTIONS[stagAppState]();
@@ -93,11 +102,32 @@ function clearRenderableAreas() {
     $(STAG_MODAL_BODY).text('');
 }
 
-function showModalAuxButton(options)
+function showModal()
 {
+    $(STAG_MAIN_MODAL).fadeIn('fast');
+    $(STAG_MAIN_MODAL).focus();
+}
+
+function showModalAuxButton(options) {
     $(STAG_MODAL_AUX_BUTTON).text(options.text);
     stagAppModalAuxButtonAction = options.action ;                         
     $(STAG_MODAL_AUX_BUTTON).show();
+}
+
+function findSchool() {
+    let searchResults = STAG_APP_SCHOOL_DATA.results.filter(
+        function(item) {
+            if ( item.details.address && item.details.closedAsOf === null ) {
+                if ( item.name.toLowerCase() === stagUserSchoolFinderSearchText.toLowerCase() ||
+                     item.name.toLowerCase().startsWith(stagUserSchoolFinderSearchText) ||
+                     item.name.includes(stagUserSchoolFinderSearchText)  ) {
+                    return item;
+                }
+            }
+        });
+
+    stagSchoolFinderSearchResults = searchResults;
+    console.log(stagSchoolFinderSearchResults);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -117,12 +147,11 @@ function renderInitialState() {
                              a number of requirements that are not taken into account. \
                              If you understand the above, click the OK button to continue \
                              using this tool.');
-    showModalAuxButton( 
-                    {
-                        text : 'Nevermind',
-                        action : function() { window.location.href = 'https://google.com'; }
-                    });
-    $(STAG_MAIN_MODAL).fadeIn('fast');
+    showModalAuxButton( {
+                    text : 'Nevermind',
+                    action : function() { window.location.href = 'https://google.com'; }
+                });
+    showModal();
 }
 
 function renderSchoolSelectionState() {
@@ -141,9 +170,13 @@ function renderSchoolSelectionState() {
             you don't see your school, click on the Find My School button \
             to search for your school.</p> \
             <form class=\"form-horizontal\"> \
-                <select name=\"stag-school-select\" id=\"js-stag-school-select\" class=\"form-control\">\
+                <label for=\"js-stag-school-select\" >Select School</label> \
+                <select name=\"stag-school-select\" id=\"js-stag-school-select\" \
+                class=\"form-control\" required>\
                 </select>\
             </form>");
+
+    $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
     stagUserLocalSchools.map(
         function(item) {
             $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + item.name + '</option>');
@@ -160,22 +193,59 @@ function renderSchoolSelectionState() {
 
 function renderSchoolFinderState() {
     $(STAG_MODAL_TITLE).text('School Finder');
-    $(STAG_MAIN_MODAL).fadeIn('fast');    
+
+    $(STAG_MODAL_BODY).append( 
+            `<p>You can search for any high school in California by name. 
+            Enter your school's name and hit enter or click OK to search for 
+            your school.</p>
+            <form class="form-horizontal">             
+                <label for="js-stag-school-finder-text" >School Name</label> 
+                <input class="form-control" type="text" 
+                name="stag-school-finder-text" id="js-stag-school-finder-text" required />
+            </form>
+            <div class="progress progress-striped active js-stag-school-finder-progress-bar"> 
+                <div class="progress-bar" style="width: 100%"></div>
+            </div>`);
+
+    $(STAG_SCHOOL_FINDER_TEXT).keydown(
+        function(event) {
+            if ( event.which == 13 ) {
+                event.preventDefault();
+                if (validSchoolSearchInput())
+                    findSchool();
+            }
+        });
+
+    showModal();
+}
+
+function validSchoolSearchInput()
+{
+    if ( $(STAG_SCHOOL_FINDER_TEXT).val().trim() ) {
+        $(this).parent().hide();
+        $(STAG_SCHOOL_FINDER_PROGRESS_BAR).show();
+        stagUserSchoolFinderSearchText = $(STAG_SCHOOL_FINDER_TEXT).val().toLowerCase().trim();
+        return true;
+    } else {
+        
+        alert('You must enter a school\s name to search!');
+        return false;
+    }    
 }
 
 function renderSchoolFinderResultsState() {
     $(STAG_MODAL_TITLE).text('School Finder Results');
-    $(STAG_MAIN_MODAL).fadeIn('fast');
+    showModal();
 }
 
 function renderGradeSelectionState() {
     $(STAG_MODAL_TITLE).text('Grade Selection');
-    $(STAG_MAIN_MODAL).fadeIn('fast');
+    showModal();
 }
 
 function renderInstructionsState(){
     $(STAG_MODAL_TITLE).text('Instructions');
-    $(STAG_MAIN_MODAL).fadeIn('fast');
+    showModal();
 }
 
 function renderCourseSelectionState() {
