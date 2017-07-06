@@ -39,6 +39,7 @@ var stagUserSchoolSelection;
 var stagUserLocalSchools;
 var stagUserSchoolFinderSearchText;
 var stagSchoolFinderSearchResults;
+var stagUserGrade;
 
 $(onReady);
 
@@ -79,10 +80,10 @@ function nextState() {
     else if ( stagAppNextState === STAG_APP_STATES.SchoolFinder && stagUserSchoolSelection ) {
         stagAppNextState = STAG_APP_STATES.GradeSelection;
     } 
-    
-    else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && !validSchoolSearchInput() ) {
-        --stagAppNextState;        
-    } 
+ 
+    else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && validSchoolSearchInput() ) {
+        findSchool();
+    }
 
     console.log(STAG_APP_STATE_RENDER_FUNCTIONS[stagAppNextState].name);
 
@@ -132,8 +133,7 @@ function findSchool() {
         });
 
     stagSchoolFinderSearchResults = searchResults;
-    console.log(stagSchoolFinderSearchResults);
-    nextState();
+    console.log(stagSchoolFinderSearchResults);    
 }
 
 function validSchoolSearchInput()
@@ -239,8 +239,9 @@ function renderSchoolFinderState() {
         function(event) {
             if ( event.which == 13 ) {
                 event.preventDefault();
-                if (validSchoolSearchInput())
-                    findSchool();
+                if (validSchoolSearchInput()) {
+                    nextState();
+                }
             }
         });
 
@@ -262,17 +263,25 @@ function renderSchoolFinderResultsState() {
             </form>`);
 
     $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
-    stagSchoolFinderSearchResults.map(
-        function(item) {
-            let displayText = item.name + ' (' + item.details.address.city + ', ' + item.details.address.state + ')';
-            $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + displayText + '</option>');
-        }
-    )
+
+    if ( stagSchoolFinderSearchResults) {
+        stagSchoolFinderSearchResults.map(
+            function(item) {
+                let displayText = item.name + ' (' + item.details.address.city + ', ' + item.details.address.state + ')';
+                $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + displayText + '</option>');
+            }
+        );
+    }
 
     $(STAG_SCHOOL_SELECT).on('change', 
         function() { 
             stagUserSchoolSelection = $(this).prop('value');
             console.log(`school selection changed: ${stagUserSchoolSelection}` );
+
+            if (!stagUserSchoolSelection)
+                $(STAG_MODAL_BUTTON).prop('disabled', 'true');
+            else
+                $(STAG_MODAL_BUTTON).removeAttr('disabled');
         });
 
     showModalAuxButton( 
@@ -280,16 +289,47 @@ function renderSchoolFinderResultsState() {
                         text : 'Search Again',
                         action : function(){ 
                                     stagSchoolFinderSearchResults = null; 
+                                    stagUserSchoolSelection = null;
                                     stagAppNextState = STAG_APP_STATES.SchoolSelection;
                                     nextState(); 
                                 }
                     });
-
+    $(STAG_MODAL_BUTTON).prop('disabled', 'true');
     showModal();
 }
 
 function renderGradeSelectionState() {
     $(STAG_MODAL_TITLE).text('Grade Selection');
+
+    $(STAG_MODAL_BODY).append( 
+            `<p>What grade are you in?</p> 
+            <form class="form-horizontal"> 
+                <label for="js-stag-school-select" >Select Grade</label> 
+                <select name="stag-school-select" id="js-stag-school-select" class="form-control" required>
+                </select>
+            </form>`);
+
+    $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
+
+
+    [ 9, 10, 11, 12 ].map(
+        function(item) {
+            $(STAG_SCHOOL_SELECT).append('<option value="' + item + '">' + item + 'th</option>');
+        }
+    );
+
+    $(STAG_SCHOOL_SELECT).on('change', 
+        function() { 
+            stagUserGrade = $(this).prop('value');
+            console.log(`grade selection changed: ${stagUserGrade}` );
+
+            if (!stagUserGrade)
+                $(STAG_MODAL_BUTTON).prop('disabled', 'true');
+            else
+                $(STAG_MODAL_BUTTON).removeAttr('disabled');
+        });
+
+    $(STAG_MODAL_BUTTON).prop('disabled', 'true');
     showModal();
 }
 
