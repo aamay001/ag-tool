@@ -353,8 +353,7 @@ function getUserLocation() {
 
 function setUserLocationLongLat(position) {
     stagUserLocationLongitute = position.coords.longitude;
-    stagUserLocationLatitude = position.coords.latitude;
-    stagUserLocationAvailable = true;
+    stagUserLocationLatitude = position.coords.latitude;    
     console.log( 'Longitude: ' + stagUserLocationLongitute);
     console.log( 'Latitude: ' + stagUserLocationLatitude);
     getUserLocality();
@@ -411,4 +410,7 @@ function parseLocalHighSchools(data) {
 
     stagUserLocalSchools = schools.sort(function(item1, item2){ return item1 > item2; });
     console.log(stagUserLocalSchools);
+
+    if (stagUserLocalSchools && stagUserLocalSchools.length > 0)
+        stagUserLocationAvailable = true;
 }
