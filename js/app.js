@@ -13,6 +13,7 @@ const STAG_MODAL_TITLE = STAG_MAIN_MODAL + ' .modal-header h4.modal-title';
 const STAG_SCHOOL_SELECT = '#js-stag-school-select';
 const STAG_SCHOOL_FINDER_TEXT = '#js-stag-school-finder-text';
 const STAG_SCHOOL_FINDER_PROGRESS_BAR = '.js-stag-school-finder-progress-bar';
+const STAG_SCHOOL_FINDER_FORM_GROUP = '.js-stag-school-finder-input-group'
 
 const STAG_APP_STATES = {
                     Initial : 0,
@@ -64,9 +65,6 @@ function bindUserInput() {
 }
 
 function nextState() {
-
-    $(STAG_MAIN_MODAL).hide();
-
     ++stagAppNextState;
 
     // If the user's location is not available, skip 
@@ -87,7 +85,12 @@ function nextState() {
     } 
 
     console.log(STAG_APP_STATE_RENDER_FUNCTIONS[stagAppNextState].name);
-    setAppState(stagAppNextState);
+
+    if ( stagAppNextState != stagAppState )
+    {
+        $(STAG_MAIN_MODAL).hide();
+        setAppState(stagAppNextState);
+    }
 }
 
 function setAppState(state) {   
@@ -100,6 +103,7 @@ function clearRenderableAreas() {
     $(STAG_MODAL_AUX_BUTTON).hide();
     $(STAG_MODAL_TITLE).text('');
     $(STAG_MODAL_BODY).text('');
+    $(STAG_MODAL_BUTTON).removeAttr('disabled');
 }
 
 function showModal()
@@ -117,10 +121,11 @@ function showModalAuxButton(options) {
 function findSchool() {
     let searchResults = STAG_APP_SCHOOL_DATA.results.filter(
         function(item) {
+            let school = item.name.toLowerCase();
             if ( item.details.address && item.details.closedAsOf === null ) {
-                if ( item.name.toLowerCase() === stagUserSchoolFinderSearchText.toLowerCase() ||
-                     item.name.toLowerCase().startsWith(stagUserSchoolFinderSearchText) ||
-                     item.name.includes(stagUserSchoolFinderSearchText)  ) {
+                if ( school === stagUserSchoolFinderSearchText ||
+                     school.startsWith(stagUserSchoolFinderSearchText) ||
+                     school.includes(stagUserSchoolFinderSearchText)  ) {
                     return item;
                 }
             }
@@ -128,6 +133,26 @@ function findSchool() {
 
     stagSchoolFinderSearchResults = searchResults;
     console.log(stagSchoolFinderSearchResults);
+    nextState();
+}
+
+function validSchoolSearchInput()
+{
+    if ( $(STAG_SCHOOL_FINDER_TEXT).val().trim() ) {
+        $(STAG_SCHOOL_FINDER_FORM_GROUP).hide();
+        $(STAG_MODAL_BUTTON).prop('disabled', 'true');
+        $(STAG_SCHOOL_FINDER_PROGRESS_BAR).show();
+        stagUserSchoolFinderSearchText = $(STAG_SCHOOL_FINDER_TEXT).val().toLowerCase().trim();
+        return true;
+    } else {
+        
+        alert('You must enter a school\s name to search!');
+        $(STAG_SCHOOL_FINDER_TEXT).val('');
+        if ( !$(STAG_SCHOOL_FINDER_FORM_GROUP).hasClass('has-error') )
+            $(STAG_SCHOOL_FINDER_FORM_GROUP).toggleClass('has-error');
+        $(STAG_SCHOOL_FINDER_TEXT).focus();
+        return false;
+    }    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -186,9 +211,10 @@ function renderSchoolSelectionState() {
     $(STAG_SCHOOL_SELECT).on('change', 
         function() { 
             stagUserSchoolSelection = $(this).prop('value');
+            console.log(`school selection changed: ${stagUserSchoolSelection}` );
         });
 
-    $(STAG_MAIN_MODAL).fadeIn('fast');
+    showModal();
 }
 
 function renderSchoolFinderState() {
@@ -196,12 +222,14 @@ function renderSchoolFinderState() {
 
     $(STAG_MODAL_BODY).append( 
             `<p>You can search for any high school in California by name. 
-            Enter your school's name and hit enter or click OK to search for 
-            your school.</p>
-            <form class="form-horizontal">             
-                <label for="js-stag-school-finder-text" >School Name</label> 
-                <input class="form-control" type="text" 
-                name="stag-school-finder-text" id="js-stag-school-finder-text" required />
+                Enter your school's name and hit enter or click OK to search for 
+                your school.</p>
+            <form class="form-horizontal">
+                <div class="form-group js-stag-school-finder-input-group">             
+                    <label for="js-stag-school-finder-text" >School Name</label> 
+                    <input class="form-control" type="text" 
+                    name="stag-school-finder-text" id="js-stag-school-finder-text" required />
+                </div>
             </form>
             <div class="progress progress-striped active js-stag-school-finder-progress-bar"> 
                 <div class="progress-bar" style="width: 100%"></div>
@@ -219,22 +247,44 @@ function renderSchoolFinderState() {
     showModal();
 }
 
-function validSchoolSearchInput()
-{
-    if ( $(STAG_SCHOOL_FINDER_TEXT).val().trim() ) {
-        $(this).parent().hide();
-        $(STAG_SCHOOL_FINDER_PROGRESS_BAR).show();
-        stagUserSchoolFinderSearchText = $(STAG_SCHOOL_FINDER_TEXT).val().toLowerCase().trim();
-        return true;
-    } else {
-        
-        alert('You must enter a school\s name to search!');
-        return false;
-    }    
-}
-
 function renderSchoolFinderResultsState() {
     $(STAG_MODAL_TITLE).text('School Finder Results');
+
+    $(STAG_MODAL_BODY).append( 
+            `<p>Here are the results for your search. 
+                Select your school from the list. If you don't see 
+                your school, you can click Search Again to find a new 
+                school. </p> 
+            <form class="form-horizontal"> 
+                <label for="js-stag-school-select" >Select School</label> 
+                <select name="stag-school-select" id="js-stag-school-select" class="form-control" required>
+                </select>
+            </form>`);
+
+    $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
+    stagSchoolFinderSearchResults.map(
+        function(item) {
+            let displayText = item.name + ' (' + item.details.address.city + ', ' + item.details.address.state + ')';
+            $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + displayText + '</option>');
+        }
+    )
+
+    $(STAG_SCHOOL_SELECT).on('change', 
+        function() { 
+            stagUserSchoolSelection = $(this).prop('value');
+            console.log(`school selection changed: ${stagUserSchoolSelection}` );
+        });
+
+    showModalAuxButton( 
+                    {
+                        text : 'Search Again',
+                        action : function(){ 
+                                    stagSchoolFinderSearchResults = null; 
+                                    stagAppNextState = STAG_APP_STATES.SchoolSelection;
+                                    nextState(); 
+                                }
+                    });
+
     showModal();
 }
 

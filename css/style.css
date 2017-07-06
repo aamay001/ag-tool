@@ -17,6 +17,12 @@
     display: none;
 }
 
+.js-stag-school-finder-input-group
+{
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
 /* Small devices (tablets, 768px and up) */
 @media (min-width: 768px) 
 {
