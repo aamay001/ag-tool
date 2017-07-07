@@ -3,6 +3,7 @@
 const STAG_GOOGLE_GEOCODING_APIKEY = 'AIzaSyDla3BIb5aFs5g6x1TrQi_MmluJOwD6c6I';
 const STAG_GOOGLE_GEOCODING_APIURL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const STAG_UC_INSTITUTIONSEARCH_APIURL = 'https://hs-articulation.ucop.edu/api/search/public/institution';
+const STAG_UC_COURSESEARCH_APIURL = 'https://hs-articulation.ucop.edu/api/course/institution/****/list/'
 
 const STAG_DEBUG_MODAL_TOGGLE = '#stag-debug-modal-toggle';
 const STAG_MAIN_MODAL = '#stag-main-modal';
@@ -39,6 +40,8 @@ var stagUserSchoolSelection;
 var stagUserLocalSchools;
 var stagUserSchoolFinderSearchText;
 var stagSchoolFinderSearchResults;
+var stagUserGrade;
+var stagSchoolCourseList;
 
 $(onReady);
 
@@ -79,10 +82,14 @@ function nextState() {
     else if ( stagAppNextState === STAG_APP_STATES.SchoolFinder && stagUserSchoolSelection ) {
         stagAppNextState = STAG_APP_STATES.GradeSelection;
     } 
-    
-    else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && !validSchoolSearchInput() ) {
-        --stagAppNextState;        
-    } 
+ 
+    else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && validSchoolSearchInput() ) {
+        findSchool();
+    }
+
+
+    if ( stagAppNextState  == STAG_APP_STATES.InstructionsDialog)
+        getSchoolCourses();
 
     console.log(STAG_APP_STATE_RENDER_FUNCTIONS[stagAppNextState].name);
 
@@ -132,8 +139,7 @@ function findSchool() {
         });
 
     stagSchoolFinderSearchResults = searchResults;
-    console.log(stagSchoolFinderSearchResults);
-    nextState();
+    console.log(stagSchoolFinderSearchResults);    
 }
 
 function validSchoolSearchInput()
@@ -144,10 +150,12 @@ function validSchoolSearchInput()
         $(STAG_SCHOOL_FINDER_PROGRESS_BAR).show();
         stagUserSchoolFinderSearchText = $(STAG_SCHOOL_FINDER_TEXT).val().toLowerCase().trim();
         return true;
-    } else {
-        
+    } 
+    
+    else {        
         alert('You must enter a school\s name to search!');
         $(STAG_SCHOOL_FINDER_TEXT).val('');
+        --stagAppNextState;
         if ( !$(STAG_SCHOOL_FINDER_FORM_GROUP).hasClass('has-error') )
             $(STAG_SCHOOL_FINDER_FORM_GROUP).toggleClass('has-error');
         $(STAG_SCHOOL_FINDER_TEXT).focus();
@@ -239,8 +247,7 @@ function renderSchoolFinderState() {
         function(event) {
             if ( event.which == 13 ) {
                 event.preventDefault();
-                if (validSchoolSearchInput())
-                    findSchool();
+                nextState();
             }
         });
 
@@ -262,17 +269,25 @@ function renderSchoolFinderResultsState() {
             </form>`);
 
     $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
-    stagSchoolFinderSearchResults.map(
-        function(item) {
-            let displayText = item.name + ' (' + item.details.address.city + ', ' + item.details.address.state + ')';
-            $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + displayText + '</option>');
-        }
-    )
+
+    if ( stagSchoolFinderSearchResults) {
+        stagSchoolFinderSearchResults.map(
+            function(item) {
+                let displayText = item.name + ' (' + item.details.address.city + ', ' + item.details.address.state + ')';
+                $(STAG_SCHOOL_SELECT).append('<option value="' + item.id + '">' + displayText + '</option>');
+            }
+        );
+    }
 
     $(STAG_SCHOOL_SELECT).on('change', 
         function() { 
             stagUserSchoolSelection = $(this).prop('value');
             console.log(`school selection changed: ${stagUserSchoolSelection}` );
+
+            if (!stagUserSchoolSelection)
+                $(STAG_MODAL_BUTTON).prop('disabled', 'true');
+            else
+                $(STAG_MODAL_BUTTON).removeAttr('disabled');
         });
 
     showModalAuxButton( 
@@ -280,16 +295,47 @@ function renderSchoolFinderResultsState() {
                         text : 'Search Again',
                         action : function(){ 
                                     stagSchoolFinderSearchResults = null; 
+                                    stagUserSchoolSelection = null;
                                     stagAppNextState = STAG_APP_STATES.SchoolSelection;
                                     nextState(); 
                                 }
                     });
-
+    $(STAG_MODAL_BUTTON).prop('disabled', 'true');
     showModal();
 }
 
 function renderGradeSelectionState() {
     $(STAG_MODAL_TITLE).text('Grade Selection');
+
+    $(STAG_MODAL_BODY).append( 
+            `<p>What grade are you in?</p> 
+            <form class="form-horizontal"> 
+                <label for="js-stag-school-select" >Select Grade</label> 
+                <select name="stag-school-select" id="js-stag-school-select" class="form-control" required>
+                </select>
+            </form>`);
+
+    $(STAG_SCHOOL_SELECT).append('<option value="">No Selection</option>');
+
+
+    [ 9, 10, 11, 12 ].map(
+        function(item) {
+            $(STAG_SCHOOL_SELECT).append('<option value="' + item + '">' + item + 'th</option>');
+        }
+    );
+
+    $(STAG_SCHOOL_SELECT).on('change', 
+        function() { 
+            stagUserGrade = $(this).prop('value');
+            console.log(`grade selection changed: ${stagUserGrade}` );
+
+            if (!stagUserGrade)
+                $(STAG_MODAL_BUTTON).prop('disabled', 'true');
+            else
+                $(STAG_MODAL_BUTTON).removeAttr('disabled');
+        });
+
+    $(STAG_MODAL_BUTTON).prop('disabled', 'true');
     showModal();
 }
 
@@ -313,8 +359,7 @@ function getUserLocation() {
 
 function setUserLocationLongLat(position) {
     stagUserLocationLongitute = position.coords.longitude;
-    stagUserLocationLatitude = position.coords.latitude;
-    stagUserLocationAvailable = true;
+    stagUserLocationLatitude = position.coords.latitude;    
     console.log( 'Longitude: ' + stagUserLocationLongitute);
     console.log( 'Latitude: ' + stagUserLocationLatitude);
     getUserLocality();
@@ -371,4 +416,34 @@ function parseLocalHighSchools(data) {
 
     stagUserLocalSchools = schools.sort(function(item1, item2){ return item1 > item2; });
     console.log(stagUserLocalSchools);
+
+    if (stagUserLocalSchools && stagUserLocalSchools.length > 0)
+        stagUserLocationAvailable = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Course Lookup
+///////////////////////////////////////////////////////////////////////////////
+function getSchoolCourses()
+{
+    $.get(STAG_UC_COURSESEARCH_APIURL.replace('****', stagUserSchoolSelection), parseCourseList);
+}
+
+function parseCourseList(results)
+{
+    stagSchoolCourseList = results.courses.map(
+        function(course) {
+            return {
+                title : coouse.title,
+                subjectName : course.disciplineName,
+                subjectArea : course.subjectAreaCode,
+                isHonors : course.isHonors,
+                isOnline : course.isOnline,
+                isClassroomBased : course.isClassroomBased,
+                length : course.courseLengthId,
+                transcriptAbbreviations : course.transcriptAbbreviations
+            }
+        });
+
+    console.log(stagSchoolCourseList);    
 }
