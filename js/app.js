@@ -3,6 +3,7 @@
 const STAG_GOOGLE_GEOCODING_APIKEY = 'AIzaSyDla3BIb5aFs5g6x1TrQi_MmluJOwD6c6I';
 const STAG_GOOGLE_GEOCODING_APIURL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const STAG_UC_INSTITUTIONSEARCH_APIURL = 'https://hs-articulation.ucop.edu/api/search/public/institution';
+const STAG_UC_COURSESEARCH_APIURL = 'https://hs-articulation.ucop.edu/api/course/institution/****/list/'
 
 const STAG_DEBUG_MODAL_TOGGLE = '#stag-debug-modal-toggle';
 const STAG_MAIN_MODAL = '#stag-main-modal';
@@ -40,6 +41,7 @@ var stagUserLocalSchools;
 var stagUserSchoolFinderSearchText;
 var stagSchoolFinderSearchResults;
 var stagUserGrade;
+var stagSchoolCourseList;
 
 $(onReady);
 
@@ -84,6 +86,10 @@ function nextState() {
     else if ( stagAppNextState === STAG_APP_STATES.SchoolFinderResults && validSchoolSearchInput() ) {
         findSchool();
     }
+
+
+    if ( stagAppNextState  == STAG_APP_STATES.InstructionsDialog)
+        getSchoolCourses();
 
     console.log(STAG_APP_STATE_RENDER_FUNCTIONS[stagAppNextState].name);
 
@@ -144,10 +150,12 @@ function validSchoolSearchInput()
         $(STAG_SCHOOL_FINDER_PROGRESS_BAR).show();
         stagUserSchoolFinderSearchText = $(STAG_SCHOOL_FINDER_TEXT).val().toLowerCase().trim();
         return true;
-    } else {
-        
+    } 
+    
+    else {        
         alert('You must enter a school\s name to search!');
         $(STAG_SCHOOL_FINDER_TEXT).val('');
+        --stagAppNextState;
         if ( !$(STAG_SCHOOL_FINDER_FORM_GROUP).hasClass('has-error') )
             $(STAG_SCHOOL_FINDER_FORM_GROUP).toggleClass('has-error');
         $(STAG_SCHOOL_FINDER_TEXT).focus();
@@ -239,9 +247,7 @@ function renderSchoolFinderState() {
         function(event) {
             if ( event.which == 13 ) {
                 event.preventDefault();
-                if (validSchoolSearchInput()) {
-                    nextState();
-                }
+                nextState();
             }
         });
 
@@ -413,4 +419,31 @@ function parseLocalHighSchools(data) {
 
     if (stagUserLocalSchools && stagUserLocalSchools.length > 0)
         stagUserLocationAvailable = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Course Lookup
+///////////////////////////////////////////////////////////////////////////////
+function getSchoolCourses()
+{
+    $.get(STAG_UC_COURSESEARCH_APIURL.replace('****', stagUserSchoolSelection), parseCourseList);
+}
+
+function parseCourseList(results)
+{
+    stagSchoolCourseList = results.courses.map(
+        function(course) {
+            return {
+                title : coouse.title,
+                subjectName : course.disciplineName,
+                subjectArea : course.subjectAreaCode,
+                isHonors : course.isHonors,
+                isOnline : course.isOnline,
+                isClassroomBased : course.isClassroomBased,
+                length : course.courseLengthId,
+                transcriptAbbreviations : course.transcriptAbbreviations
+            }
+        });
+
+    console.log(stagSchoolCourseList);    
 }

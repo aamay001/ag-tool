@@ -4,7 +4,7 @@
 #stag-main-modal
 {
     position: fixed;
-    top: 25%;
+    top: 10%;
 }
 
 .stag-modal-aux-button
@@ -31,8 +31,11 @@
 
 /* Medium devices (desktops, 992px and up) */
 @media (min-width: 992px) 
-{ 
-
+{
+    #stag-main-modal
+    {
+        top: 20%;
+    }
 }
 
 /* Large devices (large desktops, 1200px and up) */
